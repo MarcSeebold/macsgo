@@ -1,0 +1,82 @@
+ffff
+ffff
+
+49|11 <Always equal to 'I' (0x49.)|Protocol version used by the server. 
+5b47
+4552
+5d5b <start: server name
+5469
+636b
+3132
+385d
+5b44
+7573
+745f
+324f
+6e6c
+795d
+2043
+5359
+532d
+5365
+7276
+6572 <ende: server name
+00|64 <|start:map name
+655f
+6475
+7374
+32|00 <ende:map name|
+6373 <|start: folder containing game files
+676f <ende: folder containing game files
+00|43 <|start: full game name
+6f75
+6e74
+6572
+2d53
+7472
+696b
+653a
+2047
+6c6f
+6261
+6c20
+4f66
+6665
+6e73
+6976
+65|00 <|ende: full game name
+da|02 <steam app id| 
+00|10 < #players | max number
+00|64 < |type of server
+6c|00 < os of server | visibility
+01|31 < VAC on/off | start: version des game installers
+2e33
+342e
+362e
+39|00 <ende: version des game installers|
+b1|87 <Extra Data Flag (EDF) | game port (vertauscht!)
+69|07 < game port | Server's SteamID
+0c6e < Server's SteamID
+6b|13 <Server's SteamID| 
+1440
+01|65 <| start: tags
+6d70
+7479
+2c64
+7573
+745f
+322c
+6765
+722c
+7469
+636b
+3132
+382c
+7365
+6375
+7265 <ende: tags
+00|da <| appid
+0200 < ?
+0000 < ?
+0000 < ?
+00 < ?
