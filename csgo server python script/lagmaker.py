@@ -12,7 +12,7 @@ import re
 from subprocess import call
 
 # Config - Begin
-gLogFile = "/home/marc/steamcmd/games/csgo/csgo/console.log"
+gLogFile = "/home/marc/steamcmd/games/csgo/csgo/addons/sourcemod/logs/latencies.log"
 gSleepInterval = 1.0
 # Network device
 gDev = "eth0"
@@ -264,23 +264,58 @@ def parseDisconnection(line):
             del gLatenciesArt[steamid]
         logging.info('STEAMID: %s LEFT_THE_GAME', steamid)
 
-def parseNewGame(line):
+def parseMatchEnd(line):
     "Called whenever a new game (not round!) has started"
-    logging.info('NEW ROUND')
+    logging.info('MATCHEND')
     # Re-Init TC, so old entries get deleted
     tcDestroy()
     tcInit()
 
+def parseConnect(line):
+    "A new player has connected"
+    #todo
+
+def parseRoundStart(line):
+    "A new round has started"
+    #todo
+
+def parseRoundEnd(line):
+    "A round has ended"
+    #todo
+
+def parseBotTakeover(line):
+    "A player took over control of a bot"
+    #todo
+
+def parsePlayerDead(line):
+    "A player has been killed"
+    #todo
 
 def parseLine(line):
     "Parse a line"
-    if "[latencytolog.smx]" in line:
-        parseLatencyInfo(line)
-    elif "disconnected" in line:
+    splits = line.split("[latencytolog.smx]")
+    line = splits[1]
+    while line[0] == ' ': # remove leading blanks
+        line = line[1:]
+    
+    if line.startswith("DISCONNECT"):
         parseDisconnection(line)
-    elif "Loading map" in line:
-        parseNewGame(line)
-
+    elif line.startswith("CONNECT"):
+        parseConnect(line)
+    elif line.startswith("MATCHEND"):
+        parseMatchEnd(line)
+    elif line.startswith("ROUNDSTART"):
+        parseRoundStart(line)
+    elif line.startswith("ROUNDEND"):
+        parseRoundEnd(line)
+    elif line.startswith("BOTTAKEOVER"):
+        parseBotTakeover(line)
+    elif line.startswith("PLAYERDEAD"):
+        parsePlayerDead(line)
+    elif line.startswith("LATENCY"):
+        parseLatencyInfo(line)
+    else:
+        print "Unknown line. Ignoring it... Line: " + line
 
 # http://lethain.com/tailing-in-python/
 def readlines_then_tail(fin):
@@ -319,10 +354,10 @@ def main():
     try:
         with open(gLogFile, 'r') as fin:
             # Skip to last line
-            logging.debug("Skipping old lines...")
-            for line in fin:
-                pass
-            logging.debug("Done")
+            #logging.debug("Skipping old lines...")
+            #for line in fin:
+            #    pass
+            logging.debug("TODO: comment in !!! Done")
             for line in tail(fin):
                 parseLine(line.strip())
     except KeyboardInterrupt:
