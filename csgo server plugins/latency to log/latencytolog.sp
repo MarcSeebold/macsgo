@@ -11,6 +11,7 @@ public Plugin:myinfo =
 	url = ""
 };
 
+new bool:logDebugInfo = false; // Log some logDebugInfo info
 new frameSkipper;
 new String:logfile[255];
 new bool:hasIntermissionStarted = false;
@@ -29,6 +30,8 @@ public OnPluginStart()
 
 public OnClientDisconnect(int client)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo OnClientDisconnect %i", roundNumber);
     new steamid = GetSteamAccountID(client, false);
     if (steamid != 0)
         LogToFile(logfile, "DISCONNECT STEAMID: %i", steamid)
@@ -36,33 +39,37 @@ public OnClientDisconnect(int client)
 
 public OnClientPutInServer(int client)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo OnClientPutInServer %i", roundNumber);
     new steamid = GetSteamAccountID(client, false);
     if (steamid != 0)
         LogToFile(logfile, "CONNECT STEAMID: %i", steamid)
 }
 
-public OnMapStart()
-{
-    roundNumber = -1;
-}
-
 public Event_Intermission(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_Intermission %i", roundNumber);
     hasIntermissionStarted = true;
 }
 
 // src: https://github.com/powerlord/sourcemod-mapchooser-extended/blob/master/addons/sourcemod/scripting/mapchooser_extended.sp
 public Event_PhaseEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_PhaseEnd %i", roundNumber);
     /* announce_phase_end fires for both half time and the end of the map, but intermission fires first for end of the map. */
     if (hasIntermissionStarted)
     {
         LogToFile(logfile, "MATCHEND");
+        roundNumber = -2;
     }
 }
 
 public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_RoundStart %i", roundNumber);
     roundNumber++;
     if (roundNumber > 0)
         LogToFile(logfile, "ROUNDSTART: %i", roundNumber);
@@ -70,12 +77,16 @@ public Event_RoundStart(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Event_RoundEnd(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_RoundEnd %i", roundNumber);
     if (roundNumber > 0)
         LogToFile(logfile, "ROUNDEND: %i", roundNumber);
 }
 
 public Event_BotTakeover(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_BotTakeover %i", roundNumber);
     if (roundNumber <= 0)
         return;
 
@@ -87,6 +98,8 @@ public Event_BotTakeover(Handle:event, const String:name[], bool:dontBroadcast)
 
 public Event_PlayerDeath(Handle:event, const String:name[], bool:dontBroadcast)
 {
+    if (logDebugInfo)
+        LogToFile(logfile, "logDebugInfo Event_PlayerDeath %i", roundNumber);
     if (roundNumber <= 0)
         return;
 
@@ -166,7 +179,7 @@ public OnGameFrame()
 
             new fakeping = Client_GetFakePing(i, false)
             
-            LogToFile(logfile, "COUNTRY: %s IP: %s STEAMID: %s OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
+            LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %s OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
         }
     }  
 }
