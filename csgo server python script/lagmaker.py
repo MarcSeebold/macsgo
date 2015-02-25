@@ -26,13 +26,19 @@ gLagMax = 90
 gSteamAPIKey = "5302BC196B58F79673F4DD58AF5CCAA5"
 # Log level (file and console)
 gLogLevel = logging.DEBUG
+# Max number of rounds
+gMaxRounds = 9
 # Config - End
 
 # Global Vars
 # Steam UserStatsUrl
 gSteamAPIURL = "http://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v0002/?appid=730&key={}&steamid={}"
-# Cache for players latency
+# Cache for players latency. key: steamid, value: latency
 gLatencies = {}
+# Enable/Disable Artificial lag for specific players (e.g., when they are dead). Key: steamid, value: bool
+gPlayersWithoutLag = {}
+# Totally enable/disable artifical lag
+gEnableArtLag = False
 # Total time player cache
 gTotalTimePlayed = {}
 # Current artificial lag for every player
@@ -45,6 +51,8 @@ gTcIpIdMap = {}
 gTcFreeClassIDS = []
 # Current max lag of all players
 gLagCurrMax = 0
+# Current Round number
+gRound = 0
 
 # Log errors
 logging.basicConfig(filename='lagmaker.log',level=gLogLevel)
@@ -95,7 +103,9 @@ def tcDestroy():
 
 def tcSetDelay(ip, delayMs):
     "Set delay for a specific ip address. It will automatically generate a traffic command qdisc, class and a filter if not yet existant."
-    global gTcIpIdMap, gTcFreeClassIDS, gDev, gJitter
+    global gTcIpIdMap, gTcFreeClassIDS, gDev, gJitter, gEnableArtLag
+    if gEnableArtLag == False:
+        return True
     ok = True
     if ip not in gTcIpIdMap:
         "No tc stuff created yet. Do it!"
@@ -164,14 +174,8 @@ def updateCurrMaxLag():
     return gLagCurrMax
 
 
-# Defines
-PARSE_DATE = 1
-PARSE_TIME = 3
-PARSE_COUNTRY = 6
-PARSE_IP = 8
-PARSE_STEAMID = 10
-PARSE_LAG = 24
 def getCSGOPlayTime(steamid):
+    return 0 # TODO: FIXME! seit der umstellung auf die numerische steamid ist das broken...
     global gSteamAPIKey, gSteamAPIURL, gTotalTimePlayed
     if steamid in gTotalTimePlayed: #caching
         res = gTotalTimePlayed[steamid]
@@ -200,28 +204,43 @@ def getCSGOPlayTime(steamid):
     return 0
 
 
-def parseLatencyInfo(line):
+# Defines
+PARSE_COUNTRY = 2
+PARSE_IP = 4
+PARSE_STEAMID = 6
+PARSE_LAG = 20
+def parseLatencyInfo(line, date, time):
     "Parse a line of latency information"
-    global gLatencies, gLatenciesArt, gArtLagInterval, gLatencyLastEdit, gLagCurrMax
+    global gLatencies, gLatenciesArt, gArtLagInterval, gLatencyLastEdit, gLagCurrMax, gPlayersWithoutLag
     splits = line.split(' ')
 
-    if len(splits) != 24+1 or splits[4] != "[latencytolog.smx]":
+    assert(len(splits) == 21)
+    assert(splits[0] == "LATENCY:")
+
+    if gEnableArtLag == False:
         return
 
     currIP = splits[PARSE_IP]
     if currIP not in gLatencyLastEdit:
         gLatencyLastEdit[currIP] = "00:00:00"
     lastTime = gLatencyLastEdit[currIP]
-    currTime = splits[PARSE_TIME][:-1] # remove last char: 01:23:45: -> 01:23:45
-    if (abs(getTimeDiff(currTime, lastTime)) < gArtLagInterval):
+    if (abs(getTimeDiff(time, lastTime)) < gArtLagInterval):
         return # only adjust lag every X seconds
-    gLatencyLastEdit[currIP] = currTime
+    gLatencyLastEdit[currIP] = time
 
     steamid = splits[PARSE_STEAMID]
+    if steamid not in gPlayersWithoutLag: # default: on
+        gPlayersWithoutLag[steamid] = False
+
+    # Lag can be disabled for some players
+    if gPlayersWithoutLag[steamid] == True:
+        tcSetDelay(currIP, 1)
+        return
+
     if steamid not in gLatencies:  # make sure an old value exists for diff
         gLatencies[steamid] = int(0)
         gLatenciesArt[steamid] = int(0)
-    logging.debug("{} {}".format(splits[PARSE_DATE], splits[PARSE_TIME]))
+    logging.debug("{} {}".format(date, time))
     logging.debug( "{} {} {}".format(splits[PARSE_COUNTRY], currIP, steamid))
     lag = int(splits[PARSE_LAG])
     logging.debug( "lag: {}ms. diff: {}ms".format(lag, abs(lag-gLatencies[steamid])))
@@ -234,72 +253,103 @@ def parseLatencyInfo(line):
     artLag = gLagCurrMax - currRealLag
     if artLag < 1:
         artLag = 1
-    logging.debug( "Out: " + str(int(float(splits[12])*1000)))
-    logging.debug( "In: " + str(int(float(splits[14])*1000)))
-    logging.debug( "both: " + str(int(float(splits[16])*1000)))
-    logging.debug( "avg Out: " + str(int(float(splits[18])*1000)))
-    logging.debug( "avg In: " + str(int(float(splits[20])*1000)))
-    logging.debug( "avg both: " + str(int(float(splits[22])*1000)))
-    logging.debug( "real ping: " + str(int(splits[24])))
+    logging.debug( "Out: " + str(int(float(splits[8])*1000)))
+    logging.debug( "In: " + str(int(float(splits[10])*1000)))
+    logging.debug( "both: " + str(int(float(splits[12])*1000)))
+    logging.debug( "avg Out: " + str(int(float(splits[14])*1000)))
+    logging.debug( "avg In: " + str(int(float(splits[16])*1000)))
+    logging.debug( "avg both: " + str(int(float(splits[18])*1000)))
+    logging.debug( "real ping: " + str(int(splits[20])))
     gLatenciesArt[steamid] = artLag
     tcSetDelay(currIP, artLag)
 
-    csgoPlayTime = getCSGOPlayTime(convertSteamID(steamid))
+    #csgoPlayTime = getCSGOPlayTime(convertSteamID(steamid))
+    csgoPlayTime = getCSGOPlayTime(steamid)
     logging.info('IP: %s STEAMID: %s REALLAG: %i ARTLAG: %i PLAYTIME: %i', currIP, steamid, int(currRealLag), int(artLag), csgoPlayTime)
 
 
-def parseDisconnection(line):
+def parseDisconnect(line):
     "Called whenever a disconnection is detected"
     splits = line.split(' ')
-    if len(splits) < 5:
-        return
-    splits2 = splits[4].split('<')
-    if len(splits2) < 3:
-        return
-    steamid = splits2[2][:-1]
-    if steamid != "BOT":
+    assert(len(splits) == 3)
+    assert(splits[0] == "DISCONNECT")
+
+    steamid = splits[2]
+    if steamid > 0:
         if steamid in gLatencies:
             del gLatencies[steamid]
         if steamid in gLatenciesArt:
             del gLatenciesArt[steamid]
-        logging.info('STEAMID: %s LEFT_THE_GAME', steamid)
+        logging.info('%s has left the game' % steamid)
 
 def parseMatchEnd(line):
     "Called whenever a new game (not round!) has started"
+    global gEnableArtLag
     logging.info('MATCHEND')
-    # Re-Init TC, so old entries get deleted
+    # Disable TC, so old entries get deleted and players do not notice the lag in the scoreboard
+    gEnableArtLag=False
     tcDestroy()
-    tcInit()
 
 def parseConnect(line):
     "A new player has connected"
-    #todo
+    # intentionally left empty
 
 def parseRoundStart(line):
     "A new round has started"
-    #todo
+    global gRound, gEnableArtLag, gPlayersWithoutLag
+    gPlayersWithoutLag = {}
+    splits = line.split(" ")
+    assert(len(splits) == 2)
+    gRound = int(splits[1])
+    if gRound == 7: # Enable art. lag in last 3th of the game
+        tcInit()
+        gEnableArtLag=True
+        logging.info("Begin of last 3th of the game. Enabled art. lag.")
+    elif gRound == 1:
+        # disable lag... just to be sure
+        tcDestroy()
+        gEnableArtLag=False
+        logging.info("First round. Disabling artificial lag.")
+    logging.info("Round %i has started" % int(gRound))
 
 def parseRoundEnd(line):
     "A round has ended"
-    #todo
+    global gRound
+    # intentionally left empty
+    logging.info("Round %i has ended" % int(gRound))
 
 def parseBotTakeover(line):
     "A player took over control of a bot"
-    #todo
+    global gPlayersWithoutLag
+    # Re-enable lag for this player since he is part of the game again
+    steamid = line.split(" ")[1]
+    gPlayersWithoutLag[steamid]=False
+    logging.info("BotTakeover by %s" % steamid)
+
 
 def parsePlayerDead(line):
     "A player has been killed"
-    #todo
+    global gPlayersWithoutLag
+    # Disable art lag for dead players (so they do not notice when looking in the scoreboard)
+    splits = line.split(" ")
+    assert(len(splits) == 9)
+    steamidVictim = splits[2]
+    gPlayersWithoutLag[steamidVictim]=True
+    logging.info("Player killed. Victim: %s" % steamidVictim)
 
 def parseLine(line):
     "Parse a line"
     splits = line.split("[latencytolog.smx]")
+    # parse time and date
+    dateAndTime = splits[0].split(" ")
+    time = dateAndTime[3][:-1]
+    date = dateAndTime[1]
     line = splits[1]
     while line[0] == ' ': # remove leading blanks
         line = line[1:]
     
     if line.startswith("DISCONNECT"):
-        parseDisconnection(line)
+        parseDisconnect(line)
     elif line.startswith("CONNECT"):
         parseConnect(line)
     elif line.startswith("MATCHEND"):
@@ -313,7 +363,7 @@ def parseLine(line):
     elif line.startswith("PLAYERDEAD"):
         parsePlayerDead(line)
     elif line.startswith("LATENCY"):
-        parseLatencyInfo(line)
+        parseLatencyInfo(line, date, time)
     else:
         print "Unknown line. Ignoring it... Line: " + line
 
@@ -350,14 +400,13 @@ def main():
         logging.error("This script must be run as root.")
         sys.exit(1)
     tcDestroy(); # just to be sure
-    tcInit()
     try:
         with open(gLogFile, 'r') as fin:
             # Skip to last line
-            #logging.debug("Skipping old lines...")
-            #for line in fin:
-            #    pass
-            logging.debug("TODO: comment in !!! Done")
+            logging.debug("Skipping old lines...")
+            for line in fin:
+                pass
+            logging.debug("Done")
             for line in tail(fin):
                 parseLine(line.strip())
     except KeyboardInterrupt:
