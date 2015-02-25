@@ -15,7 +15,7 @@ new bool:logDebugInfo = false; // Log some logDebugInfo info
 new frameSkipper;
 new String:logfile[255];
 new bool:hasIntermissionStarted = false;
-new roundNumber = -1; // first round is warmup => first real round will be "1"
+new roundNumber = 0; // first round is warmup => first real round will be "1"
  
 public OnPluginStart()
 {
@@ -169,8 +169,9 @@ public OnGameFrame()
             new Float:inavg = GetClientAvgLatency(i, NetFlow_Incoming);
             new Float:bothavg = GetClientAvgLatency(i, NetFlow_Both);
             
-            new String:steamid[32];
-            GetClientAuthId(i, AuthId_Steam2, steamid, sizeof(steamid))//GetSteamAccountID(i);
+            //new String:steamid[32];
+            //GetClientAuthId(i, AuthId_Steam2, steamid, sizeof(steamid))//GetSteamAccountID(i);
+            new steamid = GetSteamAccountID(i, false);
             new String:ip[17];
             GetClientIP(i, ip, 16);
             
@@ -179,7 +180,7 @@ public OnGameFrame()
 
             new fakeping = Client_GetFakePing(i, false)
             
-            LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %s OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
+            LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %i OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
         }
     }  
 }
