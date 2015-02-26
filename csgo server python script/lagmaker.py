@@ -149,8 +149,8 @@ def getTimeDiff(timeA, timeB):
 
 
 # src: https://github.com/N0S4A2/Steam-ID-Converter/blob/master/SteamIDConverter.py
-def convertSteamID(steamID):
-    "Convert a steam id to community id"
+def convertStringSteamID(steamID):
+    "Convert a STEAM_0:X:Y steam id to community id"
     steamIDBase = 76561197960265728
     steamIDParts = re.split(":", steamID)
     communityID = int(steamIDParts[2]) * 2
@@ -158,6 +158,11 @@ def convertSteamID(steamID):
         communityID += 1
     communityID += steamIDBase
     return communityID
+
+def convert32SteamID(steamID):
+    res = 76561197960265728
+    res += long(steamID)
+    return res
 
 
 def updateCurrMaxLag():
@@ -175,7 +180,6 @@ def updateCurrMaxLag():
 
 
 def getCSGOPlayTime(steamid):
-    return 0 # TODO: FIXME! seit der umstellung auf die numerische steamid ist das broken...
     global gSteamAPIKey, gSteamAPIURL, gTotalTimePlayed
     if steamid in gTotalTimePlayed: #caching
         res = gTotalTimePlayed[steamid]
@@ -184,7 +188,7 @@ def getCSGOPlayTime(steamid):
 
     logging.debug("getCSGOPlayTime cache miss. Requesting total_time_played for %s", steamid)
     try:
-        response = urllib2.urlopen(gSteamAPIURL.format(gSteamAPIKey, steamid))
+        response = urllib2.urlopen(gSteamAPIURL.format(gSteamAPIKey, convert32SteamID(steamid)))
     except urllib2.HTTPError:
         logging.error("getCSGOPlayTime: HTTP error.")
         return 0
