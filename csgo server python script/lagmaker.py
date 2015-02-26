@@ -55,7 +55,7 @@ gLagCurrMax = 0
 gRound = 0
 
 # Log errors
-logging.basicConfig(filename='lagmaker.log',level=gLogLevel)
+logging.basicConfig(filename='lagmaker.log',level=gLogLevel, format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s', datefmt='%m-%d %H:%M:%S')
 # Log to console by https://docs.python.org/2/howto/logging-cookbook.html
 # define a Handler which writes INFO messages or higher to the sys.stderr
 console = logging.StreamHandler()
