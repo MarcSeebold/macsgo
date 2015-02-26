@@ -15,8 +15,17 @@ new bool:logDebugInfo = false; // Log some logDebugInfo info
 new frameSkipper;
 new String:logfile[255];
 new bool:hasIntermissionStarted = false;
-new roundNumber = 0; // first round is warmup => first real round will be "1"
+new roundNumber = 0; // first real round will be "1"
  
+public getRealPlayerCount()
+{
+    new res = 0;
+        for (new i = 1; i <= GetMaxClients(); i++)
+            if (IsClientInGame(i) && !IsFakeClient(i))
+                res++;
+    return res;
+}
+
 public OnPluginStart()
 {
     BuildPath(Path_SM, logfile, sizeof(logfile), "logs/latencies.log");
@@ -30,11 +39,14 @@ public OnPluginStart()
 
 public OnClientDisconnect(int client)
 {
+    new players = getRealPlayerCount();
     if (logDebugInfo)
-        LogToFile(logfile, "logDebugInfo OnClientDisconnect %i", roundNumber);
+        LogToFile(logfile, "logDebugInfo OnClientDisconnect %i %i", roundNumber, players);
     new steamid = GetSteamAccountID(client, false);
     if (steamid != 0)
         LogToFile(logfile, "DISCONNECT STEAMID: %i", steamid)
+    if (players == 0)
+        roundNumber = 0
 }
 
 public OnClientPutInServer(int client)
@@ -145,7 +157,7 @@ public Client_GetFakePing(client, bool:goldSource)
         latency -= tickRate * 0.5;
     }
     ping = RoundFloat(latency * 1000.0);
-    LogMessage("ping: %i lat: %f latold: %f cmd: %s cmdInt: %i tick: %f", ping, latency, latencyOld, cl_cmdrate, StringToInt(cl_cmdrate, 10), tickRate);
+    //LogMessage("ping: %i lat: %f latold: %f cmd: %s cmdInt: %i tick: %f", ping, latency, latencyOld, cl_cmdrate, StringToInt(cl_cmdrate, 10), tickRate);
     ping = mathClamp(ping, 5, 1000);
     return ping;
 }
@@ -180,7 +192,7 @@ public OnGameFrame()
 
             new fakeping = Client_GetFakePing(i, false)
             
-            LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %i OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
+            //LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %i OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
         }
     }  
 }
