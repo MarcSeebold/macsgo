@@ -20,9 +20,9 @@ new roundNumber = 0; // first real round will be "1"
 public getRealPlayerCount()
 {
     new res = 0;
-        for (new i = 1; i <= GetMaxClients(); i++)
-            if (IsClientInGame(i) && !IsFakeClient(i))
-                res++;
+    for (new i = 1; i <= GetMaxClients(); i++)
+        if (IsClientInGame(i) && !IsFakeClient(i))
+            res++;
     return res;
 }
 
@@ -146,7 +146,7 @@ public Client_GetFakePing(client, bool:goldSource)
 {
     decl ping;
     new Float:latency = GetClientAvgLatency(client, NetFlow_Outgoing);
-    new Float:latencyOld = latency;
+    //new Float:latencyOld = latency;
     decl String:cl_cmdrate[4];
     GetClientInfo(client, "cl_cmdrate", cl_cmdrate, 4);
     new Float:tickRate = GetTickInterval();
@@ -192,7 +192,7 @@ public OnGameFrame()
 
             new fakeping = Client_GetFakePing(i, false)
             
-            //LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %i OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
+            LogToFile(logfile, "LATENCY: COUNTRY: %s IP: %s STEAMID: %i OUT: %f IN: %f BOTH: %f OUTavg: %f INavg: %f BOTHavg: %f FAKEPING: %i", country, ip, steamid, out, inc, both, outavg, inavg, bothavg, fakeping);
         }
     }  
 }
